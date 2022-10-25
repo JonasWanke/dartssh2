@@ -2,23 +2,23 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
 
+import 'package:dartssh2/src/message/msg_channel.dart';
+import 'package:dartssh2/src/message/msg_request.dart';
+import 'package:dartssh2/src/message/msg_service.dart';
+import 'package:dartssh2/src/message/msg_userauth.dart';
 import 'package:dartssh2/src/sftp/sftp_client.dart';
+import 'package:dartssh2/src/socket/ssh_socket.dart';
 import 'package:dartssh2/src/ssh_algorithm.dart';
 import 'package:dartssh2/src/ssh_channel.dart';
 import 'package:dartssh2/src/ssh_channel_id.dart';
 import 'package:dartssh2/src/ssh_errors.dart';
 import 'package:dartssh2/src/ssh_forward.dart';
 import 'package:dartssh2/src/ssh_key_pair.dart';
+import 'package:dartssh2/src/ssh_message.dart';
 import 'package:dartssh2/src/ssh_session.dart';
 import 'package:dartssh2/src/ssh_transport.dart';
-import 'package:dartssh2/src/utils/async_queue.dart';
-import 'package:dartssh2/src/message/msg_channel.dart';
-import 'package:dartssh2/src/message/msg_request.dart';
-import 'package:dartssh2/src/message/msg_service.dart';
-import 'package:dartssh2/src/message/msg_userauth.dart';
-import 'package:dartssh2/src/ssh_message.dart';
-import 'package:dartssh2/src/socket/ssh_socket.dart';
 import 'package:dartssh2/src/ssh_userauth.dart';
+import 'package:dartssh2/src/utils/async_queue.dart';
 
 /// https://datatracker.ietf.org/doc/html/rfc4252#section-8
 typedef SSHPasswordRequestHandler = FutureOr<String?> Function();
@@ -737,9 +737,10 @@ class SSHClient {
     _channels[message.recipientChannel]?.handleMessage(message);
   }
 
-  void _handleChannelData(Uint8List payload) {
+  void _handleChannelData(Uint8List payload) async {
     final message = SSH_Message_Channel_Data.decode(payload);
     printTrace?.call('<- $socket: $message');
+    await _channelOpenReplyWaiters[message.recipientChannel];
     _channels[message.recipientChannel]?.handleMessage(message);
   }
 
